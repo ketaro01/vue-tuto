@@ -65,10 +65,17 @@
 import { throttle, debounce } from 'lodash-es';
 import jump from 'jump.js';
 import { createPopper } from '@popperjs/core';
+import {
+  CLICK_EVENT,
+  DEBOUNCE_DELAY,
+  END_REASON,
+  JUMP_DELAY,
+  THROTTLE_DELAY,
+} from '@/lib/constants';
 import { dataStorage } from '@/lib/DataStorage';
 
 export default {
-  name: 'Tutorial',
+  name: 'VueTutorial',
   props: {
     buttonOption: {
       type: Object,
@@ -80,8 +87,10 @@ export default {
     },
     overlayMode: {
       type: String,
-      default: 'next',
-      validator: (value) => ['next', 'pause', 'skip'].indexOf(value) !== -1,
+      default: CLICK_EVENT.NEXT,
+      validator: (value) => (
+        [CLICK_EVENT.NEXT, CLICK_EVENT.SKIP, CLICK_EVENT.PAUSE].indexOf(value) !== -1
+      ),
     },
     params: {
       type: Object,
@@ -111,15 +120,14 @@ export default {
   data() {
     return {
       tour: false,
+      showTooltip: false,
+      jumpPending: false,
       spotlightStyle: {},
-      alertItemStyle: {},
-      target: null,
-      content: null,
       stepIndex: -1,
       tutorialCount: 0,
-      showTooltip: false,
       fullHeight: 0,
-      jumpPending: false,
+      // target element
+      target: null,
     };
   },
   computed: {
@@ -180,24 +188,32 @@ export default {
   beforeDestroy() {
     window.removeEventListener('resize', this.resizeWindow);
     if (this.tour) {
-      this.stepEnd('destroyed');
+      this.stepEnd(END_REASON.DESTROY);
     }
-  },
-  destroyed() {
     if (this.$el.parentNote) {
       this.$el.parentNote.removeChild(this.$el);
     }
   },
   methods: {
+    /**
+     * 화면이 리사이즈 되는 경우 이벤트를 초기화 처리
+     */
     resizeWindow: throttle(async function resize() {
       await this.initTour();
       this.resetStep();
-    }, 200),
+    }, THROTTLE_DELAY),
 
+    /**
+     * reset 이벤트 resize 이벤트와 반복되지 않기위해 디바운싱 처리
+     */
     resetStep: debounce(function step() {
       this.step(0);
-    }, 300),
+    }, DEBOUNCE_DELAY),
 
+    /**
+     * setTimeout 이벤트를 발생시켜 화면을 새로 그림
+     * @param {number} time ms
+     */
     reRender(time = 0) {
       return new Promise((resolve) => {
         setTimeout(() => {
@@ -206,6 +222,15 @@ export default {
       });
     },
 
+    /**
+     * Step end 이벤트
+     * @param {string} reason
+     */
+    stepEnd(reason) {
+      this.tour = false;
+      this.stepIndex = -1;
+      this.$emit('end', reason);
+    },
     async initTour() {
       const { body, documentElement: html } = document;
 
@@ -226,6 +251,9 @@ export default {
       );
     },
 
+    /**
+     * tutorial start 함수
+     */
     async start() {
       if (this.tour) {
         this.tour = false;
@@ -241,7 +269,7 @@ export default {
       }
 
       if (!this.checkTutorialCount(this.tutorialName, this.maxCount)) {
-        this.stepEnd('limit');
+        this.stepEnd(END_REASON.LIMIT);
       }
 
       this.tour = true;
@@ -249,17 +277,26 @@ export default {
       this.step();
     },
 
+    /**
+     * tutorial step event
+     * @param {number} value step add value
+     */
     step(value = 1) {
       this.stepIndex += value;
 
       if (!this.steps[this.stepIndex]) {
-        this.stepEnd('end');
+        this.stepEnd(END_REASON.END);
         dataStorage.setStorageItem(this.tutorialName, this.tutorialCount + 1);
         return;
       }
       this.startTour(this.steps[this.stepIndex], value === 0);
     },
 
+    /**
+     *
+     * @param {string} name tutorial key
+     * @param {number|string} count tutorial limit count
+     */
     checkTutorialCount(name, count) {
       const maxCount = parseInt(count, 10);
 
@@ -279,8 +316,8 @@ export default {
     },
 
     /**
-     *
-     * @param {Object} step step info
+     * tour start
+     * @param {object} step step info
      * @param {boolean} skipJump skip jump
      */
     async startTour(step, skipJump) {
@@ -291,7 +328,6 @@ export default {
 
       const {
         target,
-        content,
         useJump,
         duration = 1000,
         offset = -100,
@@ -299,7 +335,6 @@ export default {
       } = step;
 
       this.target = document.querySelector(target);
-      this.content = content;
 
       if (!this.target) {
         console.error('invalid target element', target);
@@ -342,9 +377,16 @@ export default {
         this.jumpToSpotlight(spotlight, duration, offset);
       }
     },
+
+    /**
+     * spotlight 영역으로 jump 를 해주기위한 함수.
+     * @param {Element} spotlight
+     * @param {number} duration
+     * @param {number} offset
+     */
     jumpToSpotlight(spotlight, duration, offset) {
       if (this.jumpPending) {
-        this.reRender(100).then(() => {
+        this.reRender(JUMP_DELAY).then(() => {
           this.jumpToSpotlight(spotlight, duration, offset);
         });
         return;
@@ -364,6 +406,12 @@ export default {
       });
     },
 
+    /**
+     * button option 생성
+     * @param {object} option
+     * @param {string} text
+     * @returns {{lastText: (*|string), style: *, text: *}}
+     */
     getButtonOption(option, text) {
       const buttonOption = option || {};
       return {
@@ -372,6 +420,12 @@ export default {
         style: buttonOption.style,
       };
     },
+
+    /**
+     * offset 정보 생성
+     * @param {HTMLElement} el
+     * @returns {{top: number, left: number}}
+     */
     getOffset(el) {
       let _x = 0;
       let _y = 0;
@@ -387,36 +441,48 @@ export default {
       }
       return { top: _y, left: _x };
     },
+
+    /**
+     * ClientRect 생성
+     * @param {HTMLElement} element
+     * @returns {{}|ClientRect|DOMRect}
+     */
     getClientRect(element) {
       if (!element) return {};
 
       return element.getBoundingClientRect();
     },
 
+    /**
+     * overlay click 이벤트
+     */
     handleOverlayClick() {
       switch (this.overlayMode) {
-        case 'next': this.handleNextStep(); break;
-        case 'skip': this.handleSkip(); break;
-        case 'pause': break;
+        case CLICK_EVENT.NEXT: this.handleNextStep(); break;
+        case CLICK_EVENT.SKIP: this.handleSkip(); break;
+        case CLICK_EVENT.PAUSE: break;
         default: break;
       }
     },
-
+    /**
+     * Next Button 클릭 이벤트
+     */
     handleNextStep() {
       this.step(1);
     },
 
+    /**
+     * Prev Button 클릭 이벤트
+     */
     handlePrevStep() {
       this.step(-1);
     },
 
+    /**
+     * Skip Button 클릭 이벤트
+     */
     handleSkip() {
-      this.stepEnd('skip');
-    },
-    stepEnd(reason) {
-      this.tour = false;
-      this.stepIndex = -1;
-      this.$emit('end', reason);
+      this.stepEnd(END_REASON.END);
     },
   },
 };

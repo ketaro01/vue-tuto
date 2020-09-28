@@ -1,7 +1,7 @@
-import Tutorial from '@/components/Tutorial';
+import VueTutorial from '@/components/VueTutorial';
 
 const install = (Vue) => {
-  Vue.component(Tutorial.name, Tutorial);
+  Vue.component(VueTutorial.name, VueTutorial);
 };
 
 if (typeof window !== 'undefined' && window.Vue) {
@@ -9,7 +9,11 @@ if (typeof window !== 'undefined' && window.Vue) {
 }
 
 export {
-  Tutorial,
+  VueTutorial,
+  install,
 };
 
-export default install;
+export default {
+  VueTutorial,
+  install,
+};

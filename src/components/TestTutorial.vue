@@ -28,7 +28,7 @@
   </div>
 </template>
 <script>
-import Tutorial from '@/components/Tutorial';
+import Tutorial from '@/components/VueTutorial';
 
 export default {
   name: 'TestTutorial',
@@ -60,8 +60,6 @@ export default {
     };
   },
   methods: {
-    startTour() {
-    },
     randomStyle() {
       // const top = Math.floor(Math.random() * 1000);
       const left = Math.floor(Math.random() * 1000);
@@ -96,7 +94,7 @@ export default {
     width: 100%;
     > div {
       position: absolute;
-      width: 400px;
+      width: 20%;
       height: 100px;
       display: flex;
       justify-content: center;
