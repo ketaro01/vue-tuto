@@ -1,5 +1,8 @@
 # vue-tuto
 
+![Sep-28-2020 15-43-24](https://user-images.githubusercontent.com/25051371/94398928-70dfa700-01a1-11eb-8466-ead9468f6be8.gif)
+
+
 ## Installation
 
 ```
