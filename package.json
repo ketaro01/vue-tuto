@@ -8,6 +8,18 @@
     "build": "vue-cli-service build --target lib --name tutorial src/index.js",
     "lint": "vue-cli-service lint"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ketaro01/vue-tuto"
+  },
+  "keywords": [
+    "tutorial",
+    "tour",
+    "vue-tutorial",
+    "spotlight",
+    "highlight",
+    "tooltip"
+  ],
   "dependencies": {
     "@popperjs/core": "^2.4.4",
     "core-js": "^3.6.5",
